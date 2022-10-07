@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
- 
+
 #include "lcd16x2.h"
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
@@ -25,8 +25,7 @@ static const char *now_str(void)
     now /= 60U;
     h = now;
 
-    snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u",
-         h, min, s, ms);
+    snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u", h, min, s, ms);
     return buf;
 }
 
@@ -34,52 +33,23 @@ void main(void)
 {
     const struct device *const dht22 = DEVICE_DT_GET_ONE(aosong_dht);
 
-    if (!device_is_ready(dht22)) {
+    if (!device_is_ready(dht22))
+    {
         printf("Device %s is not ready\n", dht22->name);
+        printf("Exiting application...\n");
         return;
     }
 
-    while (true) {
-        int rc = sensor_sample_fetch(dht22);
-
-        if (rc != 0) {
-            printf("Sensor fetch failed: %d\n", rc);
-            break;
-        }
-
-        struct sensor_value temperature;
-        struct sensor_value humidity;
-
-        rc = sensor_channel_get(dht22, SENSOR_CHAN_AMBIENT_TEMP,
-                    &temperature);
-        if (rc == 0) {
-            rc = sensor_channel_get(dht22, SENSOR_CHAN_HUMIDITY,
-                        &humidity);
-        }
-        if (rc != 0) {
-            printf("get failed: %d\n", rc);
-            break;
-        }
-
-        printf("[%s]: %.1f °C ; %.1f %%RH\n",
-               now_str(),
-               sensor_value_to_double(&temperature),
-               sensor_value_to_double(&humidity));
-        k_sleep(K_SECONDS(2));
-    }
-}
-
-void main(void)
-{
     const struct device *const gpio_dev = DEVICE_DT_GET(GPIO_NODE);
 
     if (!device_is_ready(gpio_dev))
     {
         printk("Device %s not ready!\n", gpio_dev->name);
+        printf("Exiting application...\n");
         return;
     }
 
-    /* Setup GPIO output */
+    /* Setup GPIO output to the LCD16x2 */
     GPIO_PIN_CFG(gpio_dev, GPIO_PIN_E,  GPIO_OUTPUT);
     GPIO_PIN_CFG(gpio_dev, GPIO_PIN_RS, GPIO_OUTPUT);
     GPIO_PIN_CFG(gpio_dev, GPIO_PIN_D4, GPIO_OUTPUT);
@@ -90,16 +60,62 @@ void main(void)
     printk("LCD Init\n");
     pi_lcd_init(gpio_dev, 16, 2, LCD_5x8_DOTS);
 
-    printk("Outputting initial LCD16x2 Welcome message...\n");
+    printk("Outputting initial LCD16x2 welcome message...\n");
 
-    while (1)
+    /* Clear display */
+    pi_lcd_clear(gpio_dev);
+    pi_lcd_set_cursor(gpio_dev, 0, 0);
+    pi_lcd_string(gpio_dev, "Nuertey Odzeyem");
+    pi_lcd_set_cursor(gpio_dev, 0, 1);
+    pi_lcd_string(gpio_dev, "NUCLEO F767ZI");
+    k_msleep(MSEC_PER_SEC * 5U);
+
+    while (true)
     {
-        /* Clear display */
+        int rc = sensor_sample_fetch(dht22);
+
+        if (rc != 0)
+        {
+            printf("DHT11 Sensor fetch failed: %d\n", rc);
+            printf("Exiting application...\n");
+            break;
+        }
+
+        struct sensor_value temperature;
+        struct sensor_value humidity;
+
+        rc = sensor_channel_get(dht22, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
+        if (rc == 0)
+        {
+            rc = sensor_channel_get(dht22, SENSOR_CHAN_HUMIDITY, &humidity);
+            if (rc != 0)
+            {
+                printf("Sensor humidity retrieval failed: %d\n", rc);
+                printf("Exiting application...\n");
+                break;              
+            }
+        }
+        else 
+        {
+            printf("Sensor ambient temperature retrieval failed: %d\n", rc);
+            printf("Exiting application...\n");
+            break;
+        }
+
+        printf("[%s]: %.2f °C ; %.2f %%RH\n", now_str(), sensor_value_to_double(&temperature),
+            sensor_value_to_double(&humidity));
+            
+        char tempBuffer[16];
+        char humiBuffer[16];
+        snprintf(tempBuffer, sizeof(tempBuffer), "%.2f °C", sensor_value_to_double(&temperature));
+        snprintf(humiBuffer, sizeof(humiBuffer), "%.2f %%RH", sensor_value_to_double(&humidity));
+
         pi_lcd_clear(gpio_dev);
         pi_lcd_set_cursor(gpio_dev, 0, 0);
-        pi_lcd_string(gpio_dev, "Nuertey Odzeyem");
+        pi_lcd_string(gpio_dev, tempBuffer);
         pi_lcd_set_cursor(gpio_dev, 0, 1);
-        pi_lcd_string(gpio_dev, "NUCLEO F767ZI");
-        k_msleep(MSEC_PER_SEC * 5U);
+        pi_lcd_string(gpio_dev, humiBuffer);
+            
+        k_sleep(K_SECONDS(2));
     }
 }
