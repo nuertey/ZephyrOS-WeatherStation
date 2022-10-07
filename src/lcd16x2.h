@@ -147,9 +147,24 @@
 /* in millisecond */
 #define ENABLE_DELAY                  10
 
-/*************************
- * USER can use these APIs
- *************************/
+
+/******************************************
+ * USER can use the APIs that follow below.
+ *****************************************/ 
+#define GPIO_PIN_WR(dev, pin, bit)                      \
+    do {                                    \
+        if (gpio_pin_set_raw((dev), (pin), (bit))) {            \
+            printk("Err set " GPIO_NAME "%d! %x\n", (pin), (bit));  \
+        }                               \
+    } while (0)                             \
+
+#define GPIO_PIN_CFG(dev, pin, dir)                     \
+    do {                                    \
+        if (gpio_pin_configure((dev), (pin), (dir))) {          \
+            printk("Err cfg " GPIO_NAME "%d! %x\n", (pin), (dir));  \
+        }                               \
+    } while (0)
+
 void pi_lcd_home(const struct device *gpio_dev);
 void pi_lcd_set_cursor(const struct device *gpio_dev, uint8_t col, uint8_t row);
 void pi_lcd_clear(const struct device *gpio_dev);
