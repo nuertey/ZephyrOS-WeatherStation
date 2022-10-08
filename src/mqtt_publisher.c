@@ -6,85 +6,40 @@
 
 #include "mqtt_publisher.h"
 
-/* Buffers for MQTT client. */
-APP_BMEM uint8_t rx_buffer[APP_MQTT_BUFFER_SIZE];
-APP_BMEM uint8_t tx_buffer[APP_MQTT_BUFFER_SIZE];
-
-#if defined(CONFIG_MQTT_LIB_WEBSOCKET)
-/* Making RX buffer large enough that the full IPv6 packet can fit into it */
-#define MQTT_LIB_WEBSOCKET_RECV_BUF_LEN 1280
-
-/* Websocket needs temporary buffer to store partial packets */
-APP_BMEM uint8_t temp_ws_rx_buf[MQTT_LIB_WEBSOCKET_RECV_BUF_LEN];
-#endif
-
-/* The mqtt client struct */
-APP_BMEM struct mqtt_client client_ctx;
-
-/* MQTT Broker details. */
-APP_BMEM struct sockaddr_storage broker;
-
-#if defined(CONFIG_SOCKS)
-APP_BMEM struct sockaddr socks5_proxy;
-#endif
-
-APP_BMEM struct zsock_pollfd fds[1];
-APP_BMEM int nfds;
-
-APP_BMEM bool connected;
-
 #if defined(CONFIG_MQTT_LIB_TLS)
-
-#include "test_certs.h"
-
-#define TLS_SNI_HOSTNAME "localhost"
-#define APP_CA_CERT_TAG 1
-#define APP_PSK_TAG 2
-
-APP_DMEM sec_tag_t m_sec_tags[] =
-{
-#if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
-    APP_CA_CERT_TAG,
-#endif
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    APP_PSK_TAG,
-#endif
-};
-
-int tls_init(void)
-{
-    int err = -EINVAL;
-
-#if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
-    err = tls_credential_add(APP_CA_CERT_TAG, TLS_CREDENTIAL_CA_CERTIFICATE,
-                             ca_certificate, sizeof(ca_certificate));
-    if (err < 0)
+    int tls_init(void)
     {
-        LOG_ERR("Failed to register public certificate: %d", err);
+        int err = -EINVAL;
+    
+    #if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
+        err = tls_credential_add(APP_CA_CERT_TAG, TLS_CREDENTIAL_CA_CERTIFICATE,
+                                ca_certificate, sizeof(ca_certificate));
+        if (err < 0)
+        {
+            LOG_ERR("Failed to register public certificate: %d", err);
+            return err;
+        }
+    #endif
+    
+    #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+        err = tls_credential_add(APP_PSK_TAG, TLS_CREDENTIAL_PSK,
+                                client_psk, sizeof(client_psk));
+        if (err < 0)
+        {
+            LOG_ERR("Failed to register PSK: %d", err);
+            return err;
+        }
+    
+        err = tls_credential_add(APP_PSK_TAG, TLS_CREDENTIAL_PSK_ID,
+                                client_psk_id, sizeof(client_psk_id) - 1);
+        if (err < 0)
+        {
+            LOG_ERR("Failed to register PSK ID: %d", err);
+        }
+    #endif
+    
         return err;
     }
-#endif
-
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-    err = tls_credential_add(APP_PSK_TAG, TLS_CREDENTIAL_PSK,
-                             client_psk, sizeof(client_psk));
-    if (err < 0)
-    {
-        LOG_ERR("Failed to register PSK: %d", err);
-        return err;
-    }
-
-    err = tls_credential_add(APP_PSK_TAG, TLS_CREDENTIAL_PSK_ID,
-                             client_psk_id, sizeof(client_psk_id) - 1);
-    if (err < 0)
-    {
-        LOG_ERR("Failed to register PSK ID: %d", err);
-    }
-#endif
-
-    return err;
-}
-
 #endif /* CONFIG_MQTT_LIB_TLS */
 
 void prepare_fds(struct mqtt_client *client)
