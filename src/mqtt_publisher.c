@@ -7,31 +7,31 @@
 #include "mqtt_publisher.h"
 
 /* Buffers for MQTT client. */
-static APP_BMEM uint8_t rx_buffer[APP_MQTT_BUFFER_SIZE];
-static APP_BMEM uint8_t tx_buffer[APP_MQTT_BUFFER_SIZE];
+APP_BMEM uint8_t rx_buffer[APP_MQTT_BUFFER_SIZE];
+APP_BMEM uint8_t tx_buffer[APP_MQTT_BUFFER_SIZE];
 
 #if defined(CONFIG_MQTT_LIB_WEBSOCKET)
 /* Making RX buffer large enough that the full IPv6 packet can fit into it */
 #define MQTT_LIB_WEBSOCKET_RECV_BUF_LEN 1280
 
 /* Websocket needs temporary buffer to store partial packets */
-static APP_BMEM uint8_t temp_ws_rx_buf[MQTT_LIB_WEBSOCKET_RECV_BUF_LEN];
+APP_BMEM uint8_t temp_ws_rx_buf[MQTT_LIB_WEBSOCKET_RECV_BUF_LEN];
 #endif
 
 /* The mqtt client struct */
-static APP_BMEM struct mqtt_client client_ctx;
+APP_BMEM struct mqtt_client client_ctx;
 
 /* MQTT Broker details. */
-static APP_BMEM struct sockaddr_storage broker;
+APP_BMEM struct sockaddr_storage broker;
 
 #if defined(CONFIG_SOCKS)
-static APP_BMEM struct sockaddr socks5_proxy;
+APP_BMEM struct sockaddr socks5_proxy;
 #endif
 
-static APP_BMEM struct zsock_pollfd fds[1];
-static APP_BMEM int nfds;
+APP_BMEM struct zsock_pollfd fds[1];
+APP_BMEM int nfds;
 
-static APP_BMEM bool connected;
+APP_BMEM bool connected;
 
 #if defined(CONFIG_MQTT_LIB_TLS)
 
@@ -41,7 +41,7 @@ static APP_BMEM bool connected;
 #define APP_CA_CERT_TAG 1
 #define APP_PSK_TAG 2
 
-static APP_DMEM sec_tag_t m_sec_tags[] =
+APP_DMEM sec_tag_t m_sec_tags[] =
 {
 #if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
     APP_CA_CERT_TAG,
@@ -51,7 +51,7 @@ static APP_DMEM sec_tag_t m_sec_tags[] =
 #endif
 };
 
-static int tls_init(void)
+int tls_init(void)
 {
     int err = -EINVAL;
 
@@ -87,7 +87,7 @@ static int tls_init(void)
 
 #endif /* CONFIG_MQTT_LIB_TLS */
 
-static void prepare_fds(struct mqtt_client *client)
+void prepare_fds(struct mqtt_client *client)
 {
     if (client->transport.type == MQTT_TRANSPORT_NON_SECURE)
     {
@@ -104,12 +104,12 @@ static void prepare_fds(struct mqtt_client *client)
     nfds = 1;
 }
 
-static void clear_fds(void)
+void clear_fds(void)
 {
     nfds = 0;
 }
 
-static int wait(int timeout)
+int wait(int timeout)
 {
     int ret = 0;
 
@@ -206,15 +206,15 @@ void mqtt_evt_handler(struct mqtt_client *const client,
     }
 }
 
-static char *get_mqtt_payload(enum mqtt_qos qos)
+char *get_mqtt_payload(enum mqtt_qos qos)
 {
 #if APP_BLUEMIX_TOPIC
-    static APP_BMEM char payload[30];
+    APP_BMEM char payload[30];
 
     snprintk(payload, sizeof(payload), "{d:{temperature:%d}}",
              (uint8_t)sys_rand32_get());
 #else
-    static APP_DMEM char payload[] = "DOORS:OPEN_QoSx";
+    APP_DMEM char payload[] = "DOORS:OPEN_QoSx";
 
     payload[strlen(payload) - 1] = '0' + qos;
 #endif
@@ -222,7 +222,7 @@ static char *get_mqtt_payload(enum mqtt_qos qos)
     return payload;
 }
 
-static char *get_mqtt_topic(void)
+char *get_mqtt_topic(void)
 {
 #if APP_BLUEMIX_TOPIC
     return "iot-2/type/"BLUEMIX_DEVTYPE"/id/"BLUEMIX_DEVID
@@ -232,7 +232,7 @@ static char *get_mqtt_topic(void)
 #endif
 }
 
-static int publish(struct mqtt_client *client, enum mqtt_qos qos)
+int publish(struct mqtt_client *client, enum mqtt_qos qos)
 {
     struct mqtt_publish_param param;
 
@@ -255,7 +255,7 @@ static int publish(struct mqtt_client *client, enum mqtt_qos qos)
 #define PRINT_RESULT(func, rc) \
     LOG_INF("%s: %d <%s>", (func), rc, RC_STR(rc))
 
-static void broker_init(void)
+void broker_init(void)
 {
 #if defined(CONFIG_NET_IPV6)
     struct sockaddr_in6 *broker6 = (struct sockaddr_in6 *)&broker;
@@ -287,7 +287,7 @@ static void broker_init(void)
 #endif
 }
 
-static void client_init(struct mqtt_client *client)
+void client_init(struct mqtt_client *client)
 {
     mqtt_client_init(client);
 
@@ -354,7 +354,7 @@ static void client_init(struct mqtt_client *client)
 }
 
 /* In this routine we block until the connected variable is 1 */
-static int try_to_connect(struct mqtt_client *client)
+int try_to_connect(struct mqtt_client *client)
 {
     int rc, i = 0;
 
@@ -392,7 +392,7 @@ static int try_to_connect(struct mqtt_client *client)
     return -EINVAL;
 }
 
-static int process_mqtt_and_sleep(struct mqtt_client *client, int timeout)
+int process_mqtt_and_sleep(struct mqtt_client *client, int timeout)
 {
     int64_t remaining = timeout;
     int64_t start_time = k_uptime_get();
@@ -435,7 +435,7 @@ static int process_mqtt_and_sleep(struct mqtt_client *client, int timeout)
 #define SUCCESS_OR_EXIT(rc) { if (rc != 0) { return 1; } }
 #define SUCCESS_OR_BREAK(rc) { if (rc != 0) { break; } }
 
-static int publisher(void)
+int publisher(void)
 {
     int i, rc, r = 0;
 
@@ -488,7 +488,7 @@ static int publisher(void)
     return r;
 }
 
-static int start_app(void)
+int start_app(void)
 {
     int r = 0, i = 0;
 
@@ -519,7 +519,7 @@ K_THREAD_DEFINE(app_thread, STACK_SIZE,
                 start_app, NULL, NULL, NULL,
                 THREAD_PRIORITY, K_USER, -1);
 
-static K_HEAP_DEFINE(app_mem_pool, 1024 * 2);
+K_HEAP_DEFINE(app_mem_pool, 1024 * 2);
 #endif
 
 void main(void)
