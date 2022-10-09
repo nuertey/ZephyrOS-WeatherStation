@@ -9,6 +9,8 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
+LOG_MODULE_DECLARE(dht11_and_lcd16x2, LOG_LEVEL_DBG);
+
 static const char *now_str(void)
 {
     static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -59,7 +61,7 @@ void main(void)
     
     int result = -1;
 
-    LOG_INF("attempting to connect: ");
+    LOG_INF("Attempting to connect: ");
     result = try_to_connect(&client_ctx);
     PRINT_RESULT("try_to_connect", result);
     SUCCESS_OR_EXIT(result);

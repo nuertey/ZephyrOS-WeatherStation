@@ -6,8 +6,6 @@
 #pragma once
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(dht11_and_lcd16x2, LOG_LEVEL_DBG);
-
 #include <zephyr/kernel.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/net/mqtt.h>
@@ -26,10 +24,12 @@ LOG_MODULE_REGISTER(dht11_and_lcd16x2, LOG_LEVEL_DBG);
 #define PRINT_RESULT(func, rc) \
     LOG_INF("%s: %d <%s>", (func), rc, RC_STR(rc))
 
+// The static declarations that follow are for internal linkage, so that
+// we don't encounter multiple symbol definition errors during linking. 
+
 #if defined(CONFIG_USERSPACE)
     #include <zephyr/app_memory/app_memdomain.h>
-    K_APPMEM_PARTITION_DEFINE(app_partition);
-    struct k_mem_domain app_domain;
+    static struct k_mem_domain app_domain;
     #define APP_BMEM K_APP_BMEM(app_partition)
     #define APP_DMEM K_APP_DMEM(app_partition)
 #else
@@ -38,31 +38,31 @@ LOG_MODULE_REGISTER(dht11_and_lcd16x2, LOG_LEVEL_DBG);
 #endif
 
 /* Buffers for MQTT client. */
-APP_BMEM uint8_t rx_buffer[APP_MQTT_BUFFER_SIZE];
-APP_BMEM uint8_t tx_buffer[APP_MQTT_BUFFER_SIZE];
+static APP_BMEM uint8_t rx_buffer[APP_MQTT_BUFFER_SIZE];
+static APP_BMEM uint8_t tx_buffer[APP_MQTT_BUFFER_SIZE];
 
 #if defined(CONFIG_MQTT_LIB_WEBSOCKET)
     /* Making RX buffer large enough that the full IPv6 packet can fit into it */
     #define MQTT_LIB_WEBSOCKET_RECV_BUF_LEN 1280
     
     /* Websocket needs temporary buffer to store partial packets */
-    APP_BMEM uint8_t temp_ws_rx_buf[MQTT_LIB_WEBSOCKET_RECV_BUF_LEN];
+    static APP_BMEM uint8_t temp_ws_rx_buf[MQTT_LIB_WEBSOCKET_RECV_BUF_LEN];
 #endif
 
 /* The mqtt client struct */
-APP_BMEM struct mqtt_client client_ctx;
+static APP_BMEM struct mqtt_client client_ctx;
 
 /* MQTT Broker details. */
-APP_BMEM struct sockaddr_storage broker;
+static APP_BMEM struct sockaddr_storage broker;
 
 #if defined(CONFIG_SOCKS)
-    APP_BMEM struct sockaddr socks5_proxy;
+    static APP_BMEM struct sockaddr socks5_proxy;
 #endif
 
-APP_BMEM struct zsock_pollfd fds[1];
-APP_BMEM int nfds;
+static APP_BMEM struct zsock_pollfd fds[1];
+static APP_BMEM int nfds;
 
-APP_BMEM bool connected;
+static APP_BMEM bool connected;
 
 #if defined(CONFIG_MQTT_LIB_TLS)
     #include "test_certs.h"
@@ -71,7 +71,7 @@ APP_BMEM bool connected;
     #define APP_CA_CERT_TAG 1
     #define APP_PSK_TAG 2
     
-    APP_DMEM sec_tag_t m_sec_tags[] =
+    static APP_DMEM sec_tag_t m_sec_tags[] =
     {
     #if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
         APP_CA_CERT_TAG,

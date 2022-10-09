@@ -6,6 +6,13 @@
 
 #include "mqtt_publisher.h"
 
+LOG_MODULE_REGISTER(dht11_and_lcd16x2, LOG_LEVEL_DBG);
+
+#if defined(CONFIG_USERSPACE)
+    K_APPMEM_PARTITION_DEFINE(app_partition);
+#else
+#endif
+
 #if defined(CONFIG_MQTT_LIB_TLS)
     int tls_init(void)
     {
