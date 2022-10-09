@@ -145,7 +145,7 @@ void main(void)
         result2 = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
         SUCCESS_OR_BREAK(result2);
             
-        k_sleep(K_SECONDS(300)); // 5 minutes is reasonable of any discernable change.
+        k_sleep(K_SECONDS(300)); // 5 minutes is reasonable for any discernable change.
     }
     
     result = mqtt_disconnect(&client_ctx);
