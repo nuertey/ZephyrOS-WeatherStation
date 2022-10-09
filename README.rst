@@ -11,3 +11,7 @@ published via MQTT to a self-hosted MQTT Broker so that they can be eventually
 graphed and displayed on a Python dashboard.
 
 
+Execution Output Dashboard Plot
+*******************************
+
+![Dashboard Plot](https://github.com/nuertey/ZephyrOS-WeatherStation/blob/main/weather_station-dashboard_plot.png?raw=true)
