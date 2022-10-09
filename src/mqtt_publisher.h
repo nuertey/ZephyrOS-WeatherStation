@@ -18,6 +18,11 @@ LOG_MODULE_REGISTER(dht11_and_lcd16x2, LOG_LEVEL_DBG);
 
 #include "config.h"
 
+#define RC_STR(rc) ((rc) == 0 ? "OK" : "ERROR")
+
+#define PRINT_RESULT(func, rc) \
+    LOG_INF("%s: %d <%s>", (func), rc, RC_STR(rc))
+
 #if defined(CONFIG_USERSPACE)
     #include <zephyr/app_memory/app_memdomain.h>
     K_APPMEM_PARTITION_DEFINE(app_partition);
@@ -83,3 +88,8 @@ APP_BMEM bool connected;
  * USER can use the APIs that follow below.
  *****************************************/ 
 void prepare_fds(struct mqtt_client *client);
+void clear_fds(void);
+int wait(int timeout);
+void mqtt_evt_handler(struct mqtt_client *const client, const struct mqtt_evt *evt);
+int publish(struct mqtt_client *client, char * topic, char * payload);
+void broker_init(void);

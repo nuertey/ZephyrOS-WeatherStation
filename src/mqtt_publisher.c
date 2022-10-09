@@ -161,41 +161,15 @@ void mqtt_evt_handler(struct mqtt_client *const client,
     }
 }
 
-char *get_mqtt_payload(enum mqtt_qos qos)
-{
-#if APP_BLUEMIX_TOPIC
-    APP_BMEM char payload[30];
-
-    snprintk(payload, sizeof(payload), "{d:{temperature:%d}}",
-             (uint8_t)sys_rand32_get());
-#else
-    APP_DMEM char payload[] = "DOORS:OPEN_QoSx";
-
-    payload[strlen(payload) - 1] = '0' + qos;
-#endif
-
-    return payload;
-}
-
-char *get_mqtt_topic(void)
-{
-#if APP_BLUEMIX_TOPIC
-    return "iot-2/type/"BLUEMIX_DEVTYPE"/id/"BLUEMIX_DEVID
-           "/evt/"BLUEMIX_EVENT"/fmt/"BLUEMIX_FORMAT;
-#else
-    return "sensors";
-#endif
-}
-
-int publish(struct mqtt_client *client, enum mqtt_qos qos)
+int publish(struct mqtt_client *client, char * topic, char * payload)
 {
     struct mqtt_publish_param param;
 
-    param.message.topic.qos = qos;
-    param.message.topic.topic.utf8 = (uint8_t *)get_mqtt_topic();
+    param.message.topic.qos = MQTT_QOS_2_EXACTLY_ONCE;
+    param.message.topic.topic.utf8 = (uint8_t *)topic;
     param.message.topic.topic.size =
         strlen(param.message.topic.topic.utf8);
-    param.message.payload.data = get_mqtt_payload(qos);
+    param.message.payload.data = payload;
     param.message.payload.len =
         strlen(param.message.payload.data);
     param.message_id = sys_rand32_get();
@@ -204,11 +178,6 @@ int publish(struct mqtt_client *client, enum mqtt_qos qos)
 
     return mqtt_publish(client, &param);
 }
-
-#define RC_STR(rc) ((rc) == 0 ? "OK" : "ERROR")
-
-#define PRINT_RESULT(func, rc) \
-    LOG_INF("%s: %d <%s>", (func), rc, RC_STR(rc))
 
 void broker_init(void)
 {
