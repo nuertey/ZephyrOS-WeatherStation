@@ -1,8 +1,6 @@
-ZephyrOS Temperature and Humidity Weather Station
-#################################################
+# ZephyrOS Temperature and Humidity Weather Station
 
-Description
-***********
+## Description
 
 Measure ambient temperature and humidity periodically (0.5 Hz) with the 
 DHT11 sensor, and output the results to an LCD16x2 display. Result are also
@@ -11,7 +9,6 @@ published via MQTT to a self-hosted MQTT Broker so that they can be eventually
 graphed and displayed on a Python dashboard.
 
 
-Execution Output Dashboard Plot
-*******************************
+## Execution Output Dashboard Plot
 
 ![Dashboard Plot](https://github.com/nuertey/ZephyrOS-WeatherStation/blob/main/weather_station-dashboard_plot.png?raw=true)
