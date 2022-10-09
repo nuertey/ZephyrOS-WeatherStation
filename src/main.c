@@ -116,8 +116,12 @@ void main(void)
             
         char tempBuffer[16];
         char humiBuffer[16];
+        char tempBuffer2[100];
+        char humiBuffer2[100];
         snprintf(tempBuffer, sizeof(tempBuffer), "%.2f °C", sensor_value_to_double(&temperature));
         snprintf(humiBuffer, sizeof(humiBuffer), "%.2f %%RH", sensor_value_to_double(&humidity));
+        snprintf(tempBuffer2, sizeof(tempBuffer2), "%f", sensor_value_to_double(&temperature));
+        snprintf(humiBuffer2, sizeof(humiBuffer2), "%f", sensor_value_to_double(&humidity));
 
         pi_lcd_clear(gpio_dev);
         pi_lcd_set_cursor(gpio_dev, 0, 0);
@@ -127,21 +131,21 @@ void main(void)
         
         int result2 = -1;
         
-        result2 = publish(&client_ctx, NUCLEO_F767ZI_DHT11_IOT_MQTT_TOPIC1, tempBuffer);
+        result2 = publish(&client_ctx, NUCLEO_F767ZI_DHT11_IOT_MQTT_TOPIC1, tempBuffer2);
         PRINT_RESULT("mqtt_publish temperature", result2);
         SUCCESS_OR_BREAK(result2);
 
         result2 = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
         SUCCESS_OR_BREAK(result2);
 
-        result2 = publish(&client_ctx, NUCLEO_F767ZI_DHT11_IOT_MQTT_TOPIC2, humiBuffer);
+        result2 = publish(&client_ctx, NUCLEO_F767ZI_DHT11_IOT_MQTT_TOPIC2, humiBuffer2);
         PRINT_RESULT("mqtt_publish humidity", result2);
         SUCCESS_OR_BREAK(result2);
 
         result2 = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
         SUCCESS_OR_BREAK(result2);
             
-        k_sleep(K_SECONDS(2));
+        k_sleep(K_SECONDS(300)); // 5 minutes is reasonable of any discernable change.
     }
     
     result = mqtt_disconnect(&client_ctx);
