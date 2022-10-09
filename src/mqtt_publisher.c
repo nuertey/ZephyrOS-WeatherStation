@@ -188,26 +188,26 @@ void broker_init(void)
     broker6->sin6_port = htons(SERVER_PORT);
     zsock_inet_pton(AF_INET6, SERVER_ADDR, &broker6->sin6_addr);
 
-#if defined(CONFIG_SOCKS)
-    struct sockaddr_in6 *proxy6 = (struct sockaddr_in6 *)&socks5_proxy;
-
-    proxy6->sin6_family = AF_INET6;
-    proxy6->sin6_port = htons(SOCKS5_PROXY_PORT);
-    zsock_inet_pton(AF_INET6, SOCKS5_PROXY_ADDR, &proxy6->sin6_addr);
-#endif
+    #if defined(CONFIG_SOCKS)
+        struct sockaddr_in6 *proxy6 = (struct sockaddr_in6 *)&socks5_proxy;
+    
+        proxy6->sin6_family = AF_INET6;
+        proxy6->sin6_port = htons(SOCKS5_PROXY_PORT);
+        zsock_inet_pton(AF_INET6, SOCKS5_PROXY_ADDR, &proxy6->sin6_addr);
+    #endif
 #else
     struct sockaddr_in *broker4 = (struct sockaddr_in *)&broker;
 
     broker4->sin_family = AF_INET;
     broker4->sin_port = htons(SERVER_PORT);
     zsock_inet_pton(AF_INET, SERVER_ADDR, &broker4->sin_addr);
-#if defined(CONFIG_SOCKS)
-    struct sockaddr_in *proxy4 = (struct sockaddr_in *)&socks5_proxy;
-
-    proxy4->sin_family = AF_INET;
-    proxy4->sin_port = htons(SOCKS5_PROXY_PORT);
-    zsock_inet_pton(AF_INET, SOCKS5_PROXY_ADDR, &proxy4->sin_addr);
-#endif
+    #if defined(CONFIG_SOCKS)
+        struct sockaddr_in *proxy4 = (struct sockaddr_in *)&socks5_proxy;
+    
+        proxy4->sin_family = AF_INET;
+        proxy4->sin_port = htons(SOCKS5_PROXY_PORT);
+        zsock_inet_pton(AF_INET, SOCKS5_PROXY_ADDR, &proxy4->sin_addr);
+    #endif
 #endif
 }
 
@@ -234,38 +234,37 @@ void client_init(struct mqtt_client *client)
 
     /* MQTT transport configuration */
 #if defined(CONFIG_MQTT_LIB_TLS)
-#if defined(CONFIG_MQTT_LIB_WEBSOCKET)
-    client->transport.type = MQTT_TRANSPORT_SECURE_WEBSOCKET;
-#else
-    client->transport.type = MQTT_TRANSPORT_SECURE;
-#endif
-
+    #if defined(CONFIG_MQTT_LIB_WEBSOCKET)
+        client->transport.type = MQTT_TRANSPORT_SECURE_WEBSOCKET;
+    #else
+        client->transport.type = MQTT_TRANSPORT_SECURE;
+    #endif
+    
     struct mqtt_sec_config *tls_config = &client->transport.tls.config;
 
     tls_config->peer_verify = TLS_PEER_VERIFY_REQUIRED;
     tls_config->cipher_list = NULL;
     tls_config->sec_tag_list = m_sec_tags;
     tls_config->sec_tag_count = ARRAY_SIZE(m_sec_tags);
-#if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
-    tls_config->hostname = TLS_SNI_HOSTNAME;
+    #if defined(MBEDTLS_X509_CRT_PARSE_C) || defined(CONFIG_NET_SOCKETS_OFFLOAD)
+        tls_config->hostname = TLS_SNI_HOSTNAME;
+    #else
+        tls_config->hostname = NULL;
+    #endif
+    
 #else
-    tls_config->hostname = NULL;
-#endif
-
-#else
-#if defined(CONFIG_MQTT_LIB_WEBSOCKET)
-    client->transport.type = MQTT_TRANSPORT_NON_SECURE_WEBSOCKET;
-#else
-    client->transport.type = MQTT_TRANSPORT_NON_SECURE;
-#endif
+    #if defined(CONFIG_MQTT_LIB_WEBSOCKET)
+        client->transport.type = MQTT_TRANSPORT_NON_SECURE_WEBSOCKET;
+    #else
+        client->transport.type = MQTT_TRANSPORT_NON_SECURE;
+    #endif
 #endif
 
 #if defined(CONFIG_MQTT_LIB_WEBSOCKET)
     client->transport.websocket.config.host = SERVER_ADDR;
     client->transport.websocket.config.url = "/mqtt";
     client->transport.websocket.config.tmp_buf = temp_ws_rx_buf;
-    client->transport.websocket.config.tmp_buf_len =
-        sizeof(temp_ws_rx_buf);
+    client->transport.websocket.config.tmp_buf_len = sizeof(temp_ws_rx_buf);
     client->transport.websocket.timeout = 5 * MSEC_PER_SEC;
 #endif
 
@@ -284,7 +283,6 @@ int try_to_connect(struct mqtt_client *client)
 
     while (i++ < APP_CONNECT_TRIES && !connected)
     {
-
         client_init(client);
 
         rc = mqtt_connect(client);
@@ -356,9 +354,6 @@ int process_mqtt_and_sleep(struct mqtt_client *client, int timeout)
     return 0;
 }
 
-#define SUCCESS_OR_EXIT(rc) { if (rc != 0) { return 1; } }
-#define SUCCESS_OR_BREAK(rc) { if (rc != 0) { break; } }
-
 int publisher(void)
 {
     int i, rc, r = 0;
@@ -369,8 +364,7 @@ int publisher(void)
     SUCCESS_OR_EXIT(rc);
 
     i = 0;
-    while (i++ < CONFIG_NET_SAMPLE_APP_MAX_ITERATIONS && connected)
-    {
+
         r = -1;
 
         rc = mqtt_ping(&client_ctx);
@@ -386,23 +380,6 @@ int publisher(void)
 
         rc = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
         SUCCESS_OR_BREAK(rc);
-
-        rc = publish(&client_ctx, MQTT_QOS_1_AT_LEAST_ONCE);
-        PRINT_RESULT("mqtt_publish", rc);
-        SUCCESS_OR_BREAK(rc);
-
-        rc = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
-        SUCCESS_OR_BREAK(rc);
-
-        rc = publish(&client_ctx, MQTT_QOS_2_EXACTLY_ONCE);
-        PRINT_RESULT("mqtt_publish", rc);
-        SUCCESS_OR_BREAK(rc);
-
-        rc = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
-        SUCCESS_OR_BREAK(rc);
-
-        r = 0;
-    }
 
     rc = mqtt_disconnect(&client_ctx);
     PRINT_RESULT("mqtt_disconnect", rc);
@@ -430,20 +407,9 @@ int start_app(void)
     return r;
 }
 
-#if defined(CONFIG_USERSPACE)
-#define STACK_SIZE 2048
-
-#if IS_ENABLED(CONFIG_NET_TC_THREAD_COOPERATIVE)
-#define THREAD_PRIORITY K_PRIO_COOP(CONFIG_NUM_COOP_PRIORITIES - 1)
-#else
-#define THREAD_PRIORITY K_PRIO_PREEMPT(8)
-#endif
-
-K_THREAD_DEFINE(app_thread, STACK_SIZE,
-                start_app, NULL, NULL, NULL,
-                THREAD_PRIORITY, K_USER, -1);
-
-K_HEAP_DEFINE(app_mem_pool, 1024 * 2);
+#if defined(CONFIG_USERSPACE)    
+    K_THREAD_DEFINE(app_thread, STACK_SIZE, start_app, NULL, NULL, NULL, THREAD_PRIORITY, K_USER, -1);
+    K_HEAP_DEFINE(app_mem_pool, 1024 * 2);
 #endif
 
 void main(void)

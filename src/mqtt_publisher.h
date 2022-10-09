@@ -18,6 +18,9 @@ LOG_MODULE_REGISTER(dht11_and_lcd16x2, LOG_LEVEL_DBG);
 
 #include "config.h"
 
+#define SUCCESS_OR_EXIT(rc) { if (rc != 0) { return 1; } }
+#define SUCCESS_OR_BREAK(rc) { if (rc != 0) { break; } }
+
 #define RC_STR(rc) ((rc) == 0 ? "OK" : "ERROR")
 
 #define PRINT_RESULT(func, rc) \
@@ -84,6 +87,16 @@ APP_BMEM bool connected;
     int tls_init(void);
 #endif /* CONFIG_MQTT_LIB_TLS */
 
+#if defined(CONFIG_USERSPACE)
+    #define STACK_SIZE 2048
+    
+    #if IS_ENABLED(CONFIG_NET_TC_THREAD_COOPERATIVE)
+        #define THREAD_PRIORITY K_PRIO_COOP(CONFIG_NUM_COOP_PRIORITIES - 1)
+    #else
+        #define THREAD_PRIORITY K_PRIO_PREEMPT(8)
+    #endif
+#endif
+
 /******************************************
  * USER can use the APIs that follow below.
  *****************************************/ 
@@ -93,3 +106,6 @@ int wait(int timeout);
 void mqtt_evt_handler(struct mqtt_client *const client, const struct mqtt_evt *evt);
 int publish(struct mqtt_client *client, char * topic, char * payload);
 void broker_init(void);
+void client_init(struct mqtt_client *client);
+int try_to_connect(struct mqtt_client *client);
+int process_mqtt_and_sleep(struct mqtt_client *client, int timeout);
