@@ -213,6 +213,13 @@ void broker_init(void)
 
 void client_init(struct mqtt_client *client)
 {
+#if defined(CONFIG_MQTT_LIB_TLS)
+    int rc;
+
+    rc = tls_init();
+    PRINT_RESULT("tls_init", rc);
+#endif
+    
     mqtt_client_init(client);
 
     broker_init();
@@ -352,96 +359,4 @@ int process_mqtt_and_sleep(struct mqtt_client *client, int timeout)
     }
 
     return 0;
-}
-
-int publisher(void)
-{
-    int i, rc, r = 0;
-
-    LOG_INF("attempting to connect: ");
-    rc = try_to_connect(&client_ctx);
-    PRINT_RESULT("try_to_connect", rc);
-    SUCCESS_OR_EXIT(rc);
-
-    i = 0;
-
-        r = -1;
-
-        rc = mqtt_ping(&client_ctx);
-        PRINT_RESULT("mqtt_ping", rc);
-        SUCCESS_OR_BREAK(rc);
-
-        rc = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
-        SUCCESS_OR_BREAK(rc);
-
-        rc = publish(&client_ctx, MQTT_QOS_0_AT_MOST_ONCE);
-        PRINT_RESULT("mqtt_publish", rc);
-        SUCCESS_OR_BREAK(rc);
-
-        rc = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
-        SUCCESS_OR_BREAK(rc);
-
-    rc = mqtt_disconnect(&client_ctx);
-    PRINT_RESULT("mqtt_disconnect", rc);
-
-    LOG_INF("Bye!");
-
-    return r;
-}
-
-int start_app(void)
-{
-    int r = 0, i = 0;
-
-    while (!CONFIG_NET_SAMPLE_APP_MAX_CONNECTIONS ||
-            i++ < CONFIG_NET_SAMPLE_APP_MAX_CONNECTIONS)
-    {
-        r = publisher();
-
-        if (!CONFIG_NET_SAMPLE_APP_MAX_CONNECTIONS)
-        {
-            k_sleep(K_MSEC(5000));
-        }
-    }
-
-    return r;
-}
-
-#if defined(CONFIG_USERSPACE)    
-    K_THREAD_DEFINE(app_thread, STACK_SIZE, start_app, NULL, NULL, NULL, THREAD_PRIORITY, K_USER, -1);
-    K_HEAP_DEFINE(app_mem_pool, 1024 * 2);
-#endif
-
-void main(void)
-{
-#if defined(CONFIG_MQTT_LIB_TLS)
-    int rc;
-
-    rc = tls_init();
-    PRINT_RESULT("tls_init", rc);
-#endif
-
-#if defined(CONFIG_USERSPACE)
-    int ret;
-
-    struct k_mem_partition *parts[] =
-    {
-#if Z_LIBC_PARTITION_EXISTS
-        &z_libc_partition,
-#endif
-        &app_partition
-    };
-
-    ret = k_mem_domain_init(&app_domain, ARRAY_SIZE(parts), parts);
-    __ASSERT(ret == 0, "k_mem_domain_init() failed %d", ret);
-    ARG_UNUSED(ret);
-
-    k_mem_domain_add_thread(&app_domain, app_thread);
-    k_thread_heap_assign(app_thread, &app_mem_pool);
-
-    k_thread_start(app_thread);
-    k_thread_join(app_thread, K_FOREVER);
-#else
-    exit(start_app());
-#endif
 }

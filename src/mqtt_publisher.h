@@ -81,21 +81,11 @@ APP_BMEM bool connected;
     #endif
     };
     
-    /*************************************************
+    /************************************************
     * USER can use these TLS APIs that follow below.
     ************************************************/ 
     int tls_init(void);
 #endif /* CONFIG_MQTT_LIB_TLS */
-
-#if defined(CONFIG_USERSPACE)
-    #define STACK_SIZE 2048
-    
-    #if IS_ENABLED(CONFIG_NET_TC_THREAD_COOPERATIVE)
-        #define THREAD_PRIORITY K_PRIO_COOP(CONFIG_NUM_COOP_PRIORITIES - 1)
-    #else
-        #define THREAD_PRIORITY K_PRIO_PREEMPT(8)
-    #endif
-#endif
 
 /******************************************
  * USER can use the APIs that follow below.

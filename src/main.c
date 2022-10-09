@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 #include "lcd16x2.h"
+#include "mqtt_publisher.h"
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
@@ -56,6 +56,13 @@ void main(void)
     GPIO_PIN_CFG(gpio_dev, GPIO_PIN_D5, GPIO_OUTPUT);
     GPIO_PIN_CFG(gpio_dev, GPIO_PIN_D6, GPIO_OUTPUT);
     GPIO_PIN_CFG(gpio_dev, GPIO_PIN_D7, GPIO_OUTPUT);
+    
+    int result = -1;
+
+    LOG_INF("attempting to connect: ");
+    result = try_to_connect(&client_ctx);
+    PRINT_RESULT("try_to_connect", result);
+    SUCCESS_OR_EXIT(result);
 
     printk("LCD Init\n");
     pi_lcd_init(gpio_dev, 16, 2, LCD_5x8_DOTS);
@@ -115,7 +122,28 @@ void main(void)
         pi_lcd_string(gpio_dev, tempBuffer);
         pi_lcd_set_cursor(gpio_dev, 0, 1);
         pi_lcd_string(gpio_dev, humiBuffer);
+        
+        int result2 = -1;
+        
+        result2 = publish(&client_ctx, NUCLEO_F767ZI_DHT11_IOT_MQTT_TOPIC1, tempBuffer);
+        PRINT_RESULT("mqtt_publish temperature", result2);
+        SUCCESS_OR_BREAK(result2);
+
+        result2 = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
+        SUCCESS_OR_BREAK(result2);
+
+        result2 = publish(&client_ctx, NUCLEO_F767ZI_DHT11_IOT_MQTT_TOPIC2, humiBuffer);
+        PRINT_RESULT("mqtt_publish humidity", result2);
+        SUCCESS_OR_BREAK(result2);
+
+        result2 = process_mqtt_and_sleep(&client_ctx, APP_SLEEP_MSECS);
+        SUCCESS_OR_BREAK(result2);
             
         k_sleep(K_SECONDS(2));
     }
+    
+    result = mqtt_disconnect(&client_ctx);
+    PRINT_RESULT("mqtt_disconnect", result);
+
+    LOG_INF("Bye!");
 }
